@@ -1,0 +1,754 @@
+import { useEffect, useMemo, useState } from "react";
+
+type Product = {
+  id: string;
+  name: string;
+  category: string;
+  price: string;
+  image: string;
+  description: string;
+  amazonUrl: string;
+  highlight: string;
+  featured: boolean;
+};
+
+type Connections = {
+  siteTitle: string;
+  amazonTag: string;
+  pinterestUrl: string;
+  instagramUrl: string;
+  storefrontUrl: string;
+};
+
+type ProductForm = Omit<Product, "id">;
+
+const STORAGE_PRODUCTS = "ashphilo-products";
+const STORAGE_CONNECTIONS = "ashphilo-connections";
+
+const defaultProducts: Product[] = [
+  {
+    id: "p1",
+    name: "Minimal Glow Lamp",
+    category: "Home Decor",
+    price: "$39",
+    image:
+      "https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=1200&q=80",
+    description: "Soft ambient lighting for bedrooms, desks, and cozy corners.",
+    amazonUrl: "https://www.amazon.com/dp/B0EXAMPLE01",
+    highlight: "Warm aesthetic pick",
+    featured: true,
+  },
+  {
+    id: "p2",
+    name: "Aesthetic Desk Organizer",
+    category: "Workspace",
+    price: "$24",
+    image:
+      "https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=1200&q=80",
+    description: "A clean storage solution for creators, students, and work-from-home setups.",
+    amazonUrl: "https://www.amazon.com/dp/B0EXAMPLE02",
+    highlight: "Best for creator desks",
+    featured: false,
+  },
+  {
+    id: "p3",
+    name: "Portable Blender Bottle",
+    category: "Lifestyle",
+    price: "$29",
+    image:
+      "https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=1200&q=80",
+    description: "Blend smoothies on the go with a rechargeable portable bottle.",
+    amazonUrl: "https://www.amazon.com/dp/B0EXAMPLE03",
+    highlight: "Fitness favorite",
+    featured: true,
+  },
+  {
+    id: "p4",
+    name: "Silk Pillowcase Set",
+    category: "Beauty",
+    price: "$19",
+    image:
+      "https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=1200&q=80",
+    description: "A soft and stylish beauty essential designed for comfort and hair care.",
+    amazonUrl: "https://www.amazon.com/dp/B0EXAMPLE04",
+    highlight: "Trending self-care item",
+    featured: false,
+  },
+  {
+    id: "p5",
+    name: "Travel Coffee Tumbler",
+    category: "Travel",
+    price: "$22",
+    image:
+      "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=1200&q=80",
+    description: "Leak-resistant tumbler with a premium look for daily commutes.",
+    amazonUrl: "https://www.amazon.com/dp/B0EXAMPLE05",
+    highlight: "Morning routine boost",
+    featured: false,
+  },
+  {
+    id: "p6",
+    name: "Bluetooth Sleep Speaker",
+    category: "Tech",
+    price: "$34",
+    image:
+      "https://images.unsplash.com/photo-1511379938547-c1f69419868d?auto=format&fit=crop&w=1200&q=80",
+    description: "Relaxing sound and wireless comfort packed into a sleek bedside device.",
+    amazonUrl: "https://www.amazon.com/dp/B0EXAMPLE06",
+    highlight: "Night routine essential",
+    featured: true,
+  },
+];
+
+const defaultConnections: Connections = {
+  siteTitle: "Ashphilo",
+  amazonTag: "yourtag-20",
+  pinterestUrl: "https://www.pinterest.com/yourprofile/",
+  instagramUrl: "https://www.instagram.com/yourprofile/",
+  storefrontUrl: "https://your-ashphilo-site.com",
+};
+
+const emptyForm: ProductForm = {
+  name: "",
+  category: "",
+  price: "",
+  image: "",
+  description: "",
+  amazonUrl: "",
+  highlight: "",
+  featured: false,
+};
+
+function addAffiliateTag(url: string, tag: string) {
+  if (!url.trim()) return "#";
+
+  try {
+    const parsed = new URL(url);
+    if (tag.trim()) {
+      parsed.searchParams.set("tag", tag.trim());
+    }
+    return parsed.toString();
+  } catch {
+    if (!tag.trim()) return url;
+    return `${url}${url.includes("?") ? "&" : "?"}tag=${encodeURIComponent(tag.trim())}`;
+  }
+}
+
+function cleanHandle(url: string) {
+  return url
+    .replace(/^https?:\/\//, "")
+    .replace(/^www\./, "")
+    .replace(/\/$/, "");
+}
+
+export function App() {
+  const [products, setProducts] = useState<Product[]>(defaultProducts);
+  const [connections, setConnections] = useState<Connections>(defaultConnections);
+  const [query, setQuery] = useState("");
+  const [activeCategory, setActiveCategory] = useState("All");
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [form, setForm] = useState<ProductForm>(emptyForm);
+  const [notice, setNotice] = useState("Your product dashboard is ready.");
+
+  useEffect(() => {
+    const storedProducts = localStorage.getItem(STORAGE_PRODUCTS);
+    const storedConnections = localStorage.getItem(STORAGE_CONNECTIONS);
+
+    if (storedProducts) {
+      try {
+        setProducts(JSON.parse(storedProducts));
+      } catch {
+        setProducts(defaultProducts);
+      }
+    }
+
+    if (storedConnections) {
+      try {
+        setConnections(JSON.parse(storedConnections));
+      } catch {
+        setConnections(defaultConnections);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_PRODUCTS, JSON.stringify(products));
+  }, [products]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_CONNECTIONS, JSON.stringify(connections));
+    document.title = `${connections.siteTitle || "Ashphilo"} | Affiliate Storefront`;
+  }, [connections]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setNotice("Your product dashboard is ready."), 2600);
+    return () => window.clearTimeout(timer);
+  }, [notice]);
+
+  const categories = useMemo(
+    () => ["All", ...Array.from(new Set(products.map((product) => product.category).filter(Boolean)))],
+    [products]
+  );
+
+  const filteredProducts = useMemo(() => {
+    return products.filter((product) => {
+      const matchesCategory = activeCategory === "All" || product.category === activeCategory;
+      const text = `${product.name} ${product.category} ${product.description} ${product.highlight}`.toLowerCase();
+      const matchesQuery = text.includes(query.toLowerCase());
+      return matchesCategory && matchesQuery;
+    });
+  }, [products, activeCategory, query]);
+
+  const featuredProducts = useMemo(() => products.filter((product) => product.featured).slice(0, 3), [products]);
+
+  const storefrontUrl = connections.storefrontUrl.trim() || window.location.origin;
+
+  function updateConnection<K extends keyof Connections>(key: K, value: Connections[K]) {
+    setConnections((current) => ({ ...current, [key]: value }));
+  }
+
+  function updateForm<K extends keyof ProductForm>(key: K, value: ProductForm[K]) {
+    setForm((current) => ({ ...current, [key]: value }));
+  }
+
+  function resetForm() {
+    setEditingId(null);
+    setForm(emptyForm);
+  }
+
+  function startEdit(product: Product) {
+    setEditingId(product.id);
+    setForm({
+      name: product.name,
+      category: product.category,
+      price: product.price,
+      image: product.image,
+      description: product.description,
+      amazonUrl: product.amazonUrl,
+      highlight: product.highlight,
+      featured: product.featured,
+    });
+    setNotice(`Editing ${product.name}`);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function saveProduct() {
+    if (!form.name.trim() || !form.amazonUrl.trim()) {
+      setNotice("Add at least a product name and Amazon link.");
+      return;
+    }
+
+    if (editingId) {
+      setProducts((current) =>
+        current.map((product) =>
+          product.id === editingId ? { ...product, ...form, category: form.category || "General" } : product
+        )
+      );
+      setNotice("Product updated successfully.");
+    } else {
+      const newProduct: Product = {
+        id: crypto.randomUUID(),
+        ...form,
+        category: form.category || "General",
+      };
+      setProducts((current) => [newProduct, ...current]);
+      setNotice("New product added to Ashphilo.");
+    }
+
+    resetForm();
+  }
+
+  function removeProduct(id: string) {
+    setProducts((current) => current.filter((product) => product.id !== id));
+    if (editingId === id) resetForm();
+    setNotice("Product removed.");
+  }
+
+  async function copyText(text: string, message: string) {
+    try {
+      await navigator.clipboard.writeText(text);
+      setNotice(message);
+    } catch {
+      setNotice("Clipboard access failed. Please copy manually.");
+    }
+  }
+
+  function openPinterestShare(product: Product) {
+    const affiliateUrl = addAffiliateTag(product.amazonUrl, connections.amazonTag);
+    const shareUrl = `${storefrontUrl}#product-${product.id}`;
+    const url = new URL("https://pinterest.com/pin/create/button/");
+    url.searchParams.set("url", shareUrl);
+    url.searchParams.set("media", product.image);
+    url.searchParams.set("description", `${product.name} — ${product.highlight}. Shop here: ${affiliateUrl}`);
+    window.open(url.toString(), "_blank", "noopener,noreferrer");
+    setNotice("Pinterest share window opened.");
+  }
+
+  function openAmazon(product: Product) {
+    window.open(addAffiliateTag(product.amazonUrl, connections.amazonTag), "_blank", "noopener,noreferrer");
+  }
+
+  function exportProducts() {
+    const json = JSON.stringify(products, null, 2);
+    copyText(json, "Product JSON copied. Save it anywhere as your backup.");
+  }
+
+  return (
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(236,72,153,0.18),_transparent_30%),radial-gradient(circle_at_right,_rgba(99,102,241,0.2),_transparent_35%),linear-gradient(180deg,_#0b1020_0%,_#11162a_45%,_#f8fafc_45%,_#f8fafc_100%)] text-slate-900">
+      <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+        <header className="overflow-hidden rounded-[2rem] border border-white/10 bg-white/8 shadow-2xl shadow-slate-950/20 backdrop-blur">
+          <div className="grid gap-10 px-6 py-8 text-white lg:grid-cols-[1.35fr_0.95fr] lg:px-10 lg:py-10">
+            <div className="space-y-6">
+              <div className="inline-flex items-center gap-3 rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm font-medium text-white/90">
+                <span className="h-2.5 w-2.5 rounded-full bg-emerald-400" />
+                Smart affiliate storefront for Amazon + Pinterest workflow
+              </div>
+              <div className="space-y-4">
+                <p className="text-sm uppercase tracking-[0.35em] text-pink-200">{connections.siteTitle || "Ashphilo"}</p>
+                <h1 className="max-w-3xl text-4xl font-semibold tracking-tight sm:text-5xl lg:text-6xl">
+                  Showcase products beautifully and send shoppers straight to your Amazon affiliate links.
+                </h1>
+                <p className="max-w-2xl text-base leading-7 text-slate-200 sm:text-lg">
+                  Build your own product list, update links anytime, auto-append your Amazon Associate tag, and share products to Pinterest instantly. Instagram tools are included for captions and profile handoff.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-3 text-sm">
+                <a
+                  href="#manager"
+                  className="rounded-full bg-white px-5 py-3 font-semibold text-slate-900 transition hover:scale-[1.02]"
+                >
+                  Manage products
+                </a>
+                <a
+                  href="#catalog"
+                  className="rounded-full border border-white/20 bg-white/10 px-5 py-3 font-semibold text-white transition hover:bg-white/15"
+                >
+                  Explore storefront
+                </a>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-3">
+                {[
+                  { label: "Products", value: products.length.toString().padStart(2, "0") },
+                  { label: "Featured picks", value: products.filter((product) => product.featured).length.toString().padStart(2, "0") },
+                  { label: "Affiliate tag", value: connections.amazonTag || "Not set" },
+                ].map((item) => (
+                  <div key={item.label} className="rounded-2xl border border-white/10 bg-white/10 p-4">
+                    <div className="text-xs uppercase tracking-[0.28em] text-white/60">{item.label}</div>
+                    <div className="mt-2 text-xl font-semibold text-white">{item.value}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="rounded-[1.75rem] border border-white/15 bg-slate-950/35 p-5 shadow-xl shadow-black/20">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-sm font-semibold text-white">Connection center</p>
+                  <p className="mt-1 text-sm text-slate-300">Update your affiliate and social destinations directly here.</p>
+                </div>
+                <div className="rounded-full bg-emerald-400/15 px-3 py-1 text-xs font-medium text-emerald-200">Saved locally</div>
+              </div>
+
+              <div className="mt-5 space-y-4">
+                <label className="block">
+                  <span className="mb-2 block text-sm text-slate-200">Brand / website name</span>
+                  <input
+                    value={connections.siteTitle}
+                    onChange={(event) => updateConnection("siteTitle", event.target.value)}
+                    className="w-full rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-white outline-none placeholder:text-slate-400 focus:border-pink-300/60"
+                    placeholder="Ashphilo"
+                  />
+                </label>
+                <label className="block">
+                  <span className="mb-2 block text-sm text-slate-200">Amazon Associate tag</span>
+                  <input
+                    value={connections.amazonTag}
+                    onChange={(event) => updateConnection("amazonTag", event.target.value)}
+                    className="w-full rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-white outline-none placeholder:text-slate-400 focus:border-pink-300/60"
+                    placeholder="yourtag-20"
+                  />
+                </label>
+                <label className="block">
+                  <span className="mb-2 block text-sm text-slate-200">Pinterest profile or board URL</span>
+                  <input
+                    value={connections.pinterestUrl}
+                    onChange={(event) => updateConnection("pinterestUrl", event.target.value)}
+                    className="w-full rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-white outline-none placeholder:text-slate-400 focus:border-pink-300/60"
+                    placeholder="https://www.pinterest.com/yourprofile/"
+                  />
+                </label>
+                <label className="block">
+                  <span className="mb-2 block text-sm text-slate-200">Instagram profile URL</span>
+                  <input
+                    value={connections.instagramUrl}
+                    onChange={(event) => updateConnection("instagramUrl", event.target.value)}
+                    className="w-full rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-white outline-none placeholder:text-slate-400 focus:border-pink-300/60"
+                    placeholder="https://www.instagram.com/yourprofile/"
+                  />
+                </label>
+                <label className="block">
+                  <span className="mb-2 block text-sm text-slate-200">Your public storefront URL</span>
+                  <input
+                    value={connections.storefrontUrl}
+                    onChange={(event) => updateConnection("storefrontUrl", event.target.value)}
+                    className="w-full rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-white outline-none placeholder:text-slate-400 focus:border-pink-300/60"
+                    placeholder="https://your-ashphilo-site.com"
+                  />
+                </label>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        <main className="relative z-10 -mt-4 pb-16 pt-10">
+          <section className="grid gap-6 lg:grid-cols-[1.05fr_0.95fr]">
+            <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-xl shadow-slate-200/70">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold uppercase tracking-[0.25em] text-pink-500">Highlights</p>
+                  <h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-900">Featured collections your audience can shop now</h2>
+                </div>
+                <div className="rounded-full bg-slate-100 px-4 py-2 text-sm text-slate-600">{notice}</div>
+              </div>
+              <div className="mt-6 grid gap-4 md:grid-cols-3">
+                {featuredProducts.map((product) => (
+                  <article
+                    key={product.id}
+                    className="group overflow-hidden rounded-[1.75rem] border border-slate-200 bg-slate-50 transition hover:-translate-y-1 hover:shadow-lg"
+                  >
+                    <div className="relative h-52 overflow-hidden">
+                      <img src={product.image} alt={product.name} className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
+                      <div className="absolute left-4 top-4 rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-slate-900">
+                        {product.category}
+                      </div>
+                    </div>
+                    <div className="space-y-3 p-5">
+                      <div className="flex items-start justify-between gap-3">
+                        <h3 className="text-lg font-semibold text-slate-900">{product.name}</h3>
+                        <span className="rounded-full bg-pink-100 px-3 py-1 text-sm font-semibold text-pink-600">{product.price}</span>
+                      </div>
+                      <p className="text-sm leading-6 text-slate-600">{product.description}</p>
+                      <div className="rounded-2xl bg-white px-4 py-3 text-sm font-medium text-slate-700">{product.highlight}</div>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </div>
+
+            <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-xl shadow-slate-200/70">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold uppercase tracking-[0.25em] text-indigo-500">Automation-ready toolkit</p>
+                  <h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-900">Share smarter across Amazon, Pinterest, and Instagram</h2>
+                </div>
+              </div>
+              <div className="mt-6 grid gap-4">
+                {[
+                  {
+                    title: "Amazon affiliate redirect",
+                    copy: "Every product button automatically adds your Associate tag to the Amazon URL you enter.",
+                  },
+                  {
+                    title: "Pinterest direct sharing",
+                    copy: "Each product can open a Pinterest share flow with image, description, and your affiliate destination.",
+                  },
+                  {
+                    title: "Instagram content helper",
+                    copy: "Instagram does not allow direct public web posting from a basic frontend. This site gives you instant caption + link copy and profile handoff.",
+                  },
+                ].map((item) => (
+                  <div key={item.title} className="rounded-[1.5rem] border border-slate-200 bg-gradient-to-br from-slate-50 to-white p-5">
+                    <div className="text-base font-semibold text-slate-900">{item.title}</div>
+                    <p className="mt-2 text-sm leading-6 text-slate-600">{item.copy}</p>
+                  </div>
+                ))}
+                <div className="rounded-[1.5rem] bg-slate-950 p-5 text-white">
+                  <div className="text-sm uppercase tracking-[0.28em] text-pink-300">Your account targets</div>
+                  <div className="mt-4 space-y-3 text-sm text-slate-200">
+                    <p>
+                      <span className="font-semibold text-white">Pinterest:</span> {cleanHandle(connections.pinterestUrl || "not set")}
+                    </p>
+                    <p>
+                      <span className="font-semibold text-white">Instagram:</span> {cleanHandle(connections.instagramUrl || "not set")}
+                    </p>
+                    <p>
+                      <span className="font-semibold text-white">Storefront:</span> {cleanHandle(storefrontUrl)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section id="manager" className="mt-8 grid gap-6 lg:grid-cols-[0.92fr_1.08fr]">
+            <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-xl shadow-slate-200/70">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-sm font-semibold uppercase tracking-[0.25em] text-pink-500">Manager</p>
+                  <h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-900">
+                    {editingId ? "Edit selected product" : "Add a new product"}
+                  </h2>
+                  <p className="mt-2 text-sm leading-6 text-slate-600">
+                    Keep your Ashphilo storefront fresh by adding more products, updating prices, changing images, or replacing Amazon links anytime.
+                  </p>
+                </div>
+                <button
+                  onClick={resetForm}
+                  className="rounded-full border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
+                >
+                  Clear form
+                </button>
+              </div>
+
+              <div className="mt-6 space-y-4">
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <label className="block">
+                    <span className="mb-2 block text-sm font-medium text-slate-700">Product name</span>
+                    <input
+                      value={form.name}
+                      onChange={(event) => updateForm("name", event.target.value)}
+                      className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none transition focus:border-pink-400"
+                      placeholder="Golden desk lamp"
+                    />
+                  </label>
+                  <label className="block">
+                    <span className="mb-2 block text-sm font-medium text-slate-700">Category</span>
+                    <input
+                      value={form.category}
+                      onChange={(event) => updateForm("category", event.target.value)}
+                      className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none transition focus:border-pink-400"
+                      placeholder="Home Decor"
+                    />
+                  </label>
+                </div>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <label className="block">
+                    <span className="mb-2 block text-sm font-medium text-slate-700">Price label</span>
+                    <input
+                      value={form.price}
+                      onChange={(event) => updateForm("price", event.target.value)}
+                      className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none transition focus:border-pink-400"
+                      placeholder="$29"
+                    />
+                  </label>
+                  <label className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 mt-7 sm:mt-7">
+                    <input
+                      type="checkbox"
+                      checked={form.featured}
+                      onChange={(event) => updateForm("featured", event.target.checked)}
+                      className="h-4 w-4 rounded border-slate-300"
+                    />
+                    <span className="text-sm font-medium text-slate-700">Mark as featured</span>
+                  </label>
+                </div>
+
+                <label className="block">
+                  <span className="mb-2 block text-sm font-medium text-slate-700">Image URL</span>
+                  <input
+                    value={form.image}
+                    onChange={(event) => updateForm("image", event.target.value)}
+                    className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none transition focus:border-pink-400"
+                    placeholder="https://images.unsplash.com/..."
+                  />
+                </label>
+
+                <label className="block">
+                  <span className="mb-2 block text-sm font-medium text-slate-700">Amazon product URL</span>
+                  <input
+                    value={form.amazonUrl}
+                    onChange={(event) => updateForm("amazonUrl", event.target.value)}
+                    className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none transition focus:border-pink-400"
+                    placeholder="https://www.amazon.com/dp/..."
+                  />
+                </label>
+
+                <label className="block">
+                  <span className="mb-2 block text-sm font-medium text-slate-700">Short highlight</span>
+                  <input
+                    value={form.highlight}
+                    onChange={(event) => updateForm("highlight", event.target.value)}
+                    className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none transition focus:border-pink-400"
+                    placeholder="Perfect for cozy bedrooms"
+                  />
+                </label>
+
+                <label className="block">
+                  <span className="mb-2 block text-sm font-medium text-slate-700">Description</span>
+                  <textarea
+                    value={form.description}
+                    onChange={(event) => updateForm("description", event.target.value)}
+                    className="min-h-28 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none transition focus:border-pink-400"
+                    placeholder="Why people will love this product..."
+                  />
+                </label>
+
+                <div className="flex flex-wrap gap-3">
+                  <button
+                    onClick={saveProduct}
+                    className="rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:translate-y-[-1px]"
+                  >
+                    {editingId ? "Save changes" : "Add product"}
+                  </button>
+                  <button
+                    onClick={exportProducts}
+                    className="rounded-full border border-slate-200 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                  >
+                    Copy product JSON backup
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div id="catalog" className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-xl shadow-slate-200/70">
+              <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+                <div>
+                  <p className="text-sm font-semibold uppercase tracking-[0.25em] text-indigo-500">Storefront catalog</p>
+                  <h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-900">Ashphilo product board</h2>
+                  <p className="mt-2 text-sm leading-6 text-slate-600">Filter, manage, share, and send visitors directly to your affiliate-enabled Amazon product pages.</p>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
+                  <input
+                    value={query}
+                    onChange={(event) => setQuery(event.target.value)}
+                    className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none transition focus:border-indigo-400"
+                    placeholder="Search products"
+                  />
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-600">
+                    {filteredProducts.length} shown
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-5 flex flex-wrap gap-2">
+                {categories.map((category) => (
+                  <button
+                    key={category}
+                    onClick={() => setActiveCategory(category)}
+                    className={`rounded-full px-4 py-2 text-sm font-medium transition ${
+                      activeCategory === category
+                        ? "bg-slate-950 text-white"
+                        : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+                    }`}
+                  >
+                    {category}
+                  </button>
+                ))}
+              </div>
+
+              <div className="mt-6 grid gap-4 lg:grid-cols-2">
+                {filteredProducts.map((product) => {
+                  const affiliateLink = addAffiliateTag(product.amazonUrl, connections.amazonTag);
+                  const instagramCaption = `${product.name}\n${product.highlight}\nShop via my link: ${affiliateLink}`;
+
+                  return (
+                    <article
+                      key={product.id}
+                      id={`product-${product.id}`}
+                      className="overflow-hidden rounded-[1.75rem] border border-slate-200 bg-gradient-to-br from-white to-slate-50"
+                    >
+                      <div className="relative h-56 overflow-hidden">
+                        <img src={product.image} alt={product.name} className="h-full w-full object-cover" />
+                        <div className="absolute inset-x-0 bottom-0 flex items-center justify-between bg-gradient-to-t from-slate-950/75 to-transparent px-5 py-4">
+                          <div>
+                            <p className="text-xs uppercase tracking-[0.28em] text-white/75">{product.category}</p>
+                            <h3 className="mt-1 text-xl font-semibold text-white">{product.name}</h3>
+                          </div>
+                          <div className="rounded-full bg-white/90 px-3 py-1 text-sm font-semibold text-slate-900">{product.price}</div>
+                        </div>
+                      </div>
+
+                      <div className="space-y-4 p-5">
+                        <p className="text-sm font-medium text-pink-600">{product.highlight}</p>
+                        <p className="text-sm leading-6 text-slate-600">{product.description}</p>
+
+                        <div className="rounded-2xl bg-slate-100 px-4 py-3 text-xs leading-5 text-slate-600">
+                          Affiliate destination: <span className="font-medium text-slate-900 break-all">{affiliateLink}</span>
+                        </div>
+
+                        <div className="grid gap-3 sm:grid-cols-2">
+                          <button
+                            onClick={() => openAmazon(product)}
+                            className="rounded-full bg-slate-950 px-4 py-3 text-sm font-semibold text-white transition hover:translate-y-[-1px]"
+                          >
+                            Shop on Amazon
+                          </button>
+                          <button
+                            onClick={() => openPinterestShare(product)}
+                            className="rounded-full bg-[#E60023] px-4 py-3 text-sm font-semibold text-white transition hover:translate-y-[-1px]"
+                          >
+                            Share to Pinterest
+                          </button>
+                          <button
+                            onClick={() => copyText(affiliateLink, "Affiliate link copied.")}
+                            className="rounded-full border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                          >
+                            Copy affiliate link
+                          </button>
+                          <button
+                            onClick={() => copyText(instagramCaption, "Instagram caption copied.")}
+                            className="rounded-full border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                          >
+                            Copy Instagram caption
+                          </button>
+                          <button
+                            onClick={() => startEdit(product)}
+                            className="rounded-full border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                          >
+                            Edit product
+                          </button>
+                          <button
+                            onClick={() => removeProduct(product.id)}
+                            className="rounded-full border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-600 transition hover:bg-rose-100"
+                          >
+                            Delete product
+                          </button>
+                        </div>
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+            </div>
+          </section>
+
+          <section className="mt-8 rounded-[2rem] border border-slate-200 bg-white p-6 shadow-xl shadow-slate-200/70">
+            <div className="grid gap-6 lg:grid-cols-[1fr_auto] lg:items-center">
+              <div>
+                <p className="text-sm font-semibold uppercase tracking-[0.25em] text-pink-500">Important note</p>
+                <h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-900">What this Ashphilo website already does for you</h2>
+                <ul className="mt-4 space-y-3 text-sm leading-6 text-slate-600">
+                  <li>• Lets visitors click straight into your Amazon affiliate product links.</li>
+                  <li>• Adds your Associate tag automatically to each Amazon URL you paste.</li>
+                  <li>• Lets you update products, descriptions, prices, and images directly on the site interface.</li>
+                  <li>• Opens Pinterest sharing instantly for each product.</li>
+                  <li>• Helps with Instagram posting by copying ready-made captions and links.</li>
+                </ul>
+              </div>
+              <div className="flex flex-wrap gap-3">
+                <button
+                  onClick={() => copyText(storefrontUrl, "Storefront URL copied.")}
+                  className="rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white"
+                >
+                  Copy storefront URL
+                </button>
+                <button
+                  onClick={() => window.open(connections.instagramUrl || "https://www.instagram.com/", "_blank", "noopener,noreferrer")}
+                  className="rounded-full border border-slate-200 px-5 py-3 text-sm font-semibold text-slate-700"
+                >
+                  Open Instagram
+                </button>
+                <button
+                  onClick={() => window.open(connections.pinterestUrl || "https://www.pinterest.com/", "_blank", "noopener,noreferrer")}
+                  className="rounded-full border border-slate-200 px-5 py-3 text-sm font-semibold text-slate-700"
+                >
+                  Open Pinterest
+                </button>
+              </div>
+            </div>
+          </section>
+        </main>
+      </div>
+    </div>
+  );
+}
